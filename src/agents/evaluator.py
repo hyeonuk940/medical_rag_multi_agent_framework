@@ -8,18 +8,12 @@ class EvaluatorAgent:   # Response Evaluation Agent
     def __init__(self, model_name : str = "gpt-4"):
         self.llm = ChatOpenAI(model_name=model_name, openai_api_key=os.getenv("OPENAI_API_KEY"), temperature=0)
         self.system_prompt = """
-        당신은 의사와 환자 간의 대화를 평가하는 전문가입니다. 다음 기준에 따라 환자의 응답을 평가하세요:
-        ~~~~~~~~~~~~~~~~~~~~~~
-        ~~~~~~~~~~~~~~~~
+        당신은 의사와 환자 간의 대화를 평가하는 전문가입니다. 다음 [체크리스트]에 따라 [응답형식]을 출력하세요:
         [체크리스트]
-        ~~
         [응답 형식]
         json 형식으로 다음과 같이 응답하세요:
-        {"checklist": {
-            "relevance": true/false,
-            "accuracy": true/false,
-            "empathy": true/false,
-            "clarity": true/false
+        {"checklist": {}}
+           
         """
 
         self.prompt_template = ChatPromptTemplate.from_messages([

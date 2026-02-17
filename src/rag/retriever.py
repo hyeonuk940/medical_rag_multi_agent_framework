@@ -3,6 +3,9 @@ from typing import List
 from langchain_core.documents import Document
 from langchain_community.vectorstores import Chroma
 from langchain_openai import OpenAIEmbeddings
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class MedicalRetriever:
     def __init__ (self, db_path: str):
