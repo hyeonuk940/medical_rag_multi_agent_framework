@@ -20,25 +20,31 @@ class MedicalBrain:  # Medical Information Retrieval Agent
         self.model = None
         self.tokenizer = None
 
+        local_model_path = "models/hari-q2.5-thinking"
+
         if model_name:
-           if model_name:
             if model_name == "snuh/hari-q2.5-thinking":
-                print(f"Initializing local model: {model_name}")
+                target_path = local_model_path if os.path.exists(local_model_path) else model_name
+                print(f"Initializing local SNUH HARI model from: {target_path}")
                 bnb_config = BitsAndBytesConfig(
                     load_in_4bit=True,
                     bnb_4bit_use_double_quant=True,
                     bnb_4bit_quant_type="nf4",
-                    bnb_4bit_compute_dtype=torch.bfloat16 
+                    bnb_4bit_compute_dtype=torch.bfloat16,
+                    llm_int8_enable_fp32_cpu_offload=True
                 )
-                self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+                self.tokenizer = AutoTokenizer.from_pretrained(target_path, trust_remote_code=True)
+
+                max_memory = {0: "16GiB", "cpu": "30GiB"}
                 
                 self.model = AutoModelForCausalLM.from_pretrained(
-                model_name, 
-                quantization_config=bnb_config, 
-                dtype=torch.bfloat16,        # dtype으로 이름을 바꿔줍니다.
-                device_map="auto",
-                trust_remote_code=True
-            )
+                    target_path, 
+                    quantization_config=bnb_config, 
+                    torch_dtype=torch.bfloat16,
+                    device_map="auto",
+                    max_memory=max_memory,
+                    trust_remote_code=True
+                )
             else:
                 print(f"Initializing OpenAI model: {model_name}")
                 self.model = ChatOpenAI(model_name=model_name, temperature=0)

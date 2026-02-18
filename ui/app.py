@@ -7,7 +7,8 @@ st.set_page_config(page_title="title", layout="wide")
 def get_controller():
     return Controller(
         patient_model_name="gpt-4o-mini", 
-        medical_brain_model_name="gpt-4o-mini", 
+        # medical_brain_model_name="snuh/hari-q2.5-thinking", 
+        medical_brain_model_name="gpt-4o-mini",
         evaluator_model_name="gpt-4o-mini"
     )
 
