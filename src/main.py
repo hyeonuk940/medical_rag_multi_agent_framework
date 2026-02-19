@@ -16,7 +16,7 @@ class Controller:
             "medical_info": "",
             "checklist": {},
             "next_step": "",
-            "current_scenario": "자궁내막암 환자 시나리오"
+            "current_scenario": "망막박리"
         }
 
     def process_turn(self, user_input: str, current_state: dict):

@@ -90,7 +90,7 @@ class MedicalBrain:  # Medical Information Retrieval Agent
         print("MedicalBrain: Generating reasoning based on retrieved information...")
 
         prompt = f"""### Instruction:
-        당신은 임상 지식을 갖춘 유능하고 신뢰할 수 있는 한국어 기반 의료 어시스턴트 입니다. [의학 정보]는 환자의 상태에 대하여 검색한 관련 정보들 입니다 이중 [현재 시나리오]에 적합한 정보를 바탕으로 환자의 현재 상태를 분석하세요.
+        당신은 임상 지식을 갖춘 유능하고 신뢰할 수 있는 한국어 기반 의료 어시스턴트 입니다. [의학 정보]는 검색된 정보들 입니다 이중 [현재 시나리오]에 적합한 정보를 선택하여 환자의 현재 상태를 분석하세요.
         분석 결과는 '환자 에이전트'가 연기할 수 있도록 핵심 증상과 의학적 배경 위주로 요약하세요.
         [현재 시나리오]
         {scenario}
