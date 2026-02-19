@@ -16,7 +16,7 @@ class Controller:
             "medical_info": "",
             "checklist": {},
             "next_step": "",
-            "current_scenario": "망막박리"
+            "current_scenario": ""
         }
 
     def process_turn(self, user_input: str, current_state: dict):
@@ -42,16 +42,27 @@ class Controller:
     
 if __name__ == "__main__":
     patient_model = "gpt-4o-mini"
-    medical_brain_model = "snuh/hari-q2.5-thinking"
+    medical_brain_model = "gpt-4o-mini"
     evaluator_model = "gpt-4o-mini"
     controller = Controller(patient_model_name=patient_model, medical_brain_model_name=medical_brain_model, evaluator_model_name=evaluator_model)
     state = controller.get_initial_state()
 
     print("medical RAG Multi-Agent Framework CLI 실행")
     while True:
+        if not state.get("current_scenario"):
+            print("시나리오를 입력해 주세요 ")
+            scenario_input = input(">> ")
+            state["current_scenario"] = scenario_input
+            print(f"시나리오가 설정되었습니다: {state['current_scenario']}\n")
+
         user_input = input(">> ")
         if user_input.lower() in ["exit", "quit", "q", "Q"]:
             break
+
+        elif user_input.lower() in ["reset", "r", "R"]:
+            state = controller.get_initial_state()
+            print("대화가 초기화되었습니다.")
+            continue
         
         state = controller.process_turn(user_input, state)
         print(f":{state['messages'][-1].content}\n")

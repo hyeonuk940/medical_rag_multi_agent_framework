@@ -47,7 +47,7 @@ class MedicalBrain:  # Medical Information Retrieval Agent
                 )
             else:
                 print(f"Initializing OpenAI model: {model_name}")
-                self.model = ChatOpenAI(model_name=model_name, temperature=0)
+                self.model = ChatOpenAI(model_name=model_name, temperature=0.3)
         
     def _generate_reasoning(self, prompt):
         if not self.model:
