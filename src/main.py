@@ -14,6 +14,7 @@ class Controller:
         return {
             "messages": [],
             "medical_info": "",
+            "retrieved_docs": [],
             "checklist": {},
             "next_step": "",
             "current_scenario": ""
@@ -30,6 +31,9 @@ class Controller:
                 print(f"\n [Node: {node_name}] is finished processing.")
                 
                 if node_name == "medical_brain" and "medical_info" in output:
+                    docs = output.get('retrieved_docs', [])
+                    doc_preview = docs[0][:300] if docs else "No docs"
+                    print(f"     Retrieved medical information:\n   {doc_preview}...")
                     print(f"     medical analysis:\n   {output['medical_info'][:150]}...") 
 
                 if node_name == "patient_agent" and "messages" in output:
