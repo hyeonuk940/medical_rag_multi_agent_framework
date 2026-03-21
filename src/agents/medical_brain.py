@@ -75,7 +75,11 @@ class MedicalBrain:  # Medical Information Retrieval Agent
             search_query = f"{scenario} {last_ai_msg} {last_human_msg}"
         else:
             search_query = f"{scenario} {last_human_msg}"
-        retrieved_knowledge = self.retriever.retrieve(search_query, k=3)
+        messages_data = "\n".join([
+            f"{'User' if msg.type == 'human' else 'Assistant'}: {msg.content}" 
+            for msg in messages
+        ])
+        retrieved_knowledge = self.retriever.retrieve(search_query, k=5)
 
         if isinstance(retrieved_knowledge, str):
             retrieved_knowledge = [retrieved_knowledge]
@@ -90,14 +94,17 @@ class MedicalBrain:  # Medical Information Retrieval Agent
         print("MedicalBrain: Generating reasoning based on retrieved information...")
 
         prompt = f"""### Instruction:
-        당신은 임상 지식을 갖춘 유능하고 신뢰할 수 있는 한국어 기반 의료 어시스턴트 입니다. [의학 정보]는 검색된 정보들 입니다 이중 [현재 시나리오]에 적합한 정보를 선택하여 환자의 현재 상태를 분석하세요.
-        분석 결과는 '환자 에이전트'가 연기할 수 있도록 핵심 증상과 의학적 배경 위주로 요약하세요.
+        당신은 완화의료 전문가로서 검색된 [의학 정보]의 내용 중 [현재 시나리오]와 [대화 내용]에 알맞은 정보를 선택하여 현재 환자가 보여야 할 핵심 증상, 특징 그리고 감정 및 반응을 분석하여 분석 질문에 대답하세요.
         [현재 시나리오]
         {scenario}
+        [대화 내용]
+        {messages_data}
         [의학 정보]
         {retrieved_knowledge}
-        ### Question:
-        이 환자가 지금 보여야 할 핵심 증상과 통증의 특징은 무엇인가요?
+        ### 분석 질문 : 
+        1. 검색된 [의학 정보] 중에서 현재 시나리오와 대화 내용에 가장 관련성이 높은 정보들을 요약하고 환자 입장에서의 핵심을 분석하세요.
+        2. 현재 시나리오에서 이 환자가 보여야할 핵심 증상, 특징 그리고 감정 및 반응은 무엇인가요?
+        3. 대화의 맥락속에서 이번 의사에 질문에 대한 이 환자가 보여야할 적절한 반응은 무엇인가요?
         """
         reasoned_info = self._generate_reasoning(prompt)
         return {
@@ -110,7 +117,7 @@ if __name__ == "__main__":    # Example usage
     from langchain_core.messages import HumanMessage
 
     node_state = {
-        "messages": [HumanMessage(content="고혈압의 일반적인 치료 방법은 무엇인가요?")],
+        "messages": [HumanMessage(content="")],
         "medical_info": "",
         "checklist": {},
         "next_step": ""
