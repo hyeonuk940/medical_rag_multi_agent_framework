@@ -69,18 +69,49 @@ class JsonMedicalDataIngestor: # Class to handle ingestion of medical JSON data
         for file_path in tqdm(file_list, desc="Processing JSON files"):
             try:
                 with open(file_path, 'r', encoding='utf-8-sig') as f:
-                    data = json.load(f)
-                    content = f"질문: {data.get('question')}\n답변: {data.get('answer')}"
-                    metadata = {
-                        "qa_id": data.get("qa_id"),
-                        "domain": data.get("domain"),
-                        "q_type": data.get("q_type"),
-                        "source": file_path
-                    }
-                    all_docs.append(Document(page_content=content, metadata=metadata))
+                    data_list = json.load(f)
+
+                    if not isinstance(data_list, list):
+                        data_list = [data_list]
+                    
+                    for item in data_list:
+                        title = item.get('title') or ""
+                        mid_title = item.get('mid_title') or ""
+                        chapter = item.get('chapter') or ""
+                        content = item.get('content') or ""
+
+                        combined_content = f"title: {title}\nmid_title: {mid_title}\nchapter: {chapter}\ncontent: {content}".strip()
+
+                        metadata = {
+                            "id" : item.get("id"),
+                            "domain": item.get("domain") or "",
+                            "title": title,
+                            "mid_title": mid_title,
+                            "book_title": item.get('book_title') or "",
+                            "chapter": chapter,
+                            "source": file_path
+                        }
+
+                        if content.strip():
+                            all_docs.append(Document(page_content=combined_content, metadata=metadata))
             except json.JSONDecodeError as e:
                 print(f"\nError decoding JSON from file {file_path}: {e}")
+            except Exception as e:
+                print(f"\nError processing file {file_path}: {e}")
         return all_docs
+
+        #             data = json.load(f)
+        #             content = f"질문: {data.get('question')}\n답변: {data.get('answer')}"
+        #             metadata = {
+        #                 "qa_id": data.get("qa_id"),
+        #                 "domain": data.get("domain"),
+        #                 "q_type": data.get("q_type"),
+        #                 "source": file_path
+        #             }
+        #             all_docs.append(Document(page_content=content, metadata=metadata))
+        #     except json.JSONDecodeError as e:
+        #         print(f"\nError decoding JSON from file {file_path}: {e}")
+        # return all_docs
 
 if __name__ == "__main__":
     data_path = 'data/datasets'  # Path to the directory containing JSON files
