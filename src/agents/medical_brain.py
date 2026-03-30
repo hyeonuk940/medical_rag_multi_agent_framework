@@ -11,6 +11,7 @@ from src.graph.state import AgentState
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from langchain_openai import ChatOpenAI
 import torch
+from deep_translator import GoogleTranslator
 
 
 class MedicalBrain:  # Medical Information Retrieval Agent
@@ -79,6 +80,17 @@ class MedicalBrain:  # Medical Information Retrieval Agent
             f"{'User' if msg.type == 'human' else 'Assistant'}: {msg.content}" 
             for msg in messages
         ])
+        
+        # Translate search query to English and combine with original
+        try:
+            translator = GoogleTranslator(source='ko', target='en')
+            search_query_en = translator.translate(search_query)
+            # Combine Korean and English queries for better retrieval
+            search_query = f"{search_query} {search_query_en}"
+            print(f"Search query (KO+EN): {search_query}")
+        except Exception as e:
+            print(f"Translation failed: {e}. Using original query only.")
+        
         retrieved_knowledge = self.retriever.retrieve(search_query, k=5)
 
         if isinstance(retrieved_knowledge, str):
@@ -94,7 +106,7 @@ class MedicalBrain:  # Medical Information Retrieval Agent
         print("MedicalBrain: Generating reasoning based on retrieved information...")
 
         prompt = f"""### Instruction:
-        당신은 완화의료 전문가로서 검색된 [의학 정보]의 내용 중 [현재 시나리오]와 [대화 내용]에 알맞은 정보를 선택하여 현재 환자가 보여야 할 핵심 증상, 특징 그리고 감정 및 반응을 분석하여 분석 질문에 대답하세요.
+        당신은 완화의료 전문가로서 검색된 [의학 정보]의 내용 중 [현재 시나리오]와 [대화 내용]에 알맞은 정보를 선택하여 현재 환자가 보일 가능성이 높은 핵심 증상, 특징 그리고 감정 및 반응을 분석하여 분석 질문에 대답하세요.
         [현재 시나리오]
         {scenario}
         [대화 내용]
@@ -103,8 +115,8 @@ class MedicalBrain:  # Medical Information Retrieval Agent
         {retrieved_knowledge}
         ### 분석 질문 : 
         1. 검색된 [의학 정보] 중에서 현재 시나리오와 대화 내용에 가장 관련성이 높은 정보들을 요약하고 환자 입장에서의 핵심을 분석하세요.
-        2. 현재 시나리오에서 이 환자가 보여야할 핵심 증상, 특징 그리고 감정 및 반응은 무엇인가요?
-        3. 대화의 맥락속에서 이번 의사에 질문에 대한 이 환자가 보여야할 적절한 반응은 무엇인가요?
+        2. 현재 시나리오에서 이 환자가 보일 가능성이 높은 핵심 증상, 특징 그리고 감정 및 반응은 무엇인가요?
+        3. 대화의 맥락속에서 이번 의사에 질문에 대한 이 환자가 보일 가능성이 높은 반응은 무엇인가요?
         """
         reasoned_info = self._generate_reasoning(prompt)
         return {
