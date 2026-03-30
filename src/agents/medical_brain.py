@@ -80,7 +80,6 @@ class MedicalBrain:  # Medical Information Retrieval Agent
             f"{'User' if msg.type == 'human' else 'Assistant'}: {msg.content}" 
             for msg in messages
         ])
-        
         # Translate search query to English and combine with original
         try:
             translator = GoogleTranslator(source='ko', target='en')
