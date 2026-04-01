@@ -12,12 +12,13 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from langchain_openai import ChatOpenAI
 import torch
 from deep_translator import GoogleTranslator
-
+from src.agents.retriever import retrieve_medical_info
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 class MedicalBrain:  # Medical Information Retrieval Agent
     def __init__ (self, model_name = None, db_path="data/chroma_db"):
         self.model_name = model_name
-        self.retriever = MedicalRetriever(db_path)
+        # self.retriever = MedicalRetriever(db_path)
         self.model = None
         self.tokenizer = None
 
@@ -48,7 +49,7 @@ class MedicalBrain:  # Medical Information Retrieval Agent
                 )
             else:
                 print(f"Initializing OpenAI model: {model_name}")
-                self.model = ChatOpenAI(model_name=model_name, temperature=0.3)
+                self.model = ChatOpenAI(model_name=model_name, temperature=0).bind_tools([retrieve_medical_info])
         
     def _generate_reasoning(self, prompt):
         if not self.model:
@@ -68,29 +69,27 @@ class MedicalBrain:  # Medical Information Retrieval Agent
 
     def __call__ (self, state: AgentState):
         print("MedicalBrain: Retrieving relevant medical information...")
-        scenario = state.get("current_scenario", "")
+        scenario_theme = state.get("scenario_theme", "")
+        if scenario_theme == "breaking_bad_news":
+            scenario_theme_exp = "환자에게 죽음에 대해 알리는 상황"
+        elif scenario_theme == "dignified_choice":
+            scenario_theme_exp = "존엄한 선택을 돕는 상황"
+        elif scenario_theme == "final_moments":
+            scenario_theme_exp = "환자의 임종 직전 환자의 가족과의 대화 상황"
+        scenario_details = state.get("scenario_details", {})
         messages = state["messages"]
         last_human_msg = state["messages"][-1].content
         if len(messages) >= 2:
             last_ai_msg = messages[-2].content
-            search_query = f"{scenario} {last_ai_msg} {last_human_msg}"
+            search_query = f"{scenario_theme_exp} {last_ai_msg} {last_human_msg} {scenario_details}"
         else:
-            search_query = f"{scenario} {last_human_msg}"
+            search_query = f"{scenario_theme_exp} {last_human_msg} {scenario_details}"
         messages_data = "\n".join([
             f"{'User' if msg.type == 'human' else 'Assistant'}: {msg.content}" 
             for msg in messages
         ])
-        # Translate search query to English and combine with original
-        try:
-            translator = GoogleTranslator(source='ko', target='en')
-            search_query_en = translator.translate(search_query)
-            # Combine Korean and English queries for better retrieval
-            search_query = f"{search_query} {search_query_en}"
-            print(f"Search query (KO+EN): {search_query}")
-        except Exception as e:
-            print(f"Translation failed: {e}. Using original query only.")
         
-        retrieved_knowledge = self.retriever.retrieve(search_query, k=5)
+        retrieved_knowledge = retrieve_medical_info.invoke({"query": search_query, "k": 5})
 
         if isinstance(retrieved_knowledge, str):
             retrieved_knowledge = [retrieved_knowledge]
@@ -104,25 +103,53 @@ class MedicalBrain:  # Medical Information Retrieval Agent
             }
         print("MedicalBrain: Generating reasoning based on retrieved information...")
 
-        prompt = f"""### Instruction:
-        당신은 완화의료 전문가로서 검색된 [의학 정보]의 내용 중 [현재 시나리오]와 [대화 내용]에 알맞은 정보를 선택하여 현재 환자가 보일 가능성이 높은 핵심 증상, 특징 그리고 감정 및 반응을 분석하여 분석 질문에 대답하세요.
-        [현재 시나리오]
-        {scenario}
-        [대화 내용]
-        {messages_data}
+        prompt = f"""
+        ### Instruction:
+        당신은 완화의료 전문가입니다 {scenario_theme_exp}에서 환자가 어떤 증상을 보일 가능성이 높은지, 그리고 환자가 어떤 감정과 반응을 보일 가능성이 높은지를 분석하는 것이 당신의 역할입니다. 검색된 [의학 정보]의 내용 중 [대화 내용]과 [환자 정보]에 알맞은 정보를 참고하여 분석 질문에 대답하세요.
         [의학 정보]
         {retrieved_knowledge}
-        ### 분석 질문 : 
-        1. 검색된 [의학 정보] 중에서 현재 시나리오와 대화 내용에 가장 관련성이 높은 정보들을 요약하고 환자 입장에서의 핵심을 분석하세요.
-        2. 현재 시나리오에서 이 환자가 보일 가능성이 높은 핵심 증상, 특징 그리고 감정 및 반응은 무엇인가요?
+        [환자 정보]
+        {scenario_details}
+        [대화 내용]
+        {messages_data}
+        ### 분석 질문 :
+        1. 검색된 [의학 정보]를 바탕으로 현재 상황과 대화 내용에 관련성이 높은 정보들을 요약하고 환자 입장에서의 핵심을 분석하세요.
+        2. 현재 상황과 [환자 정보]및 [대화 내용]을 바탕으로 환자가 보일 가능성이 높은 핵심 증상, 특징 그리고 감정 및 반응을 분석하세요.
         3. 대화의 맥락속에서 이번 의사에 질문에 대한 이 환자가 보일 가능성이 높은 반응은 무엇인가요?
+        #####
+        [행동 지침]
+        'retrieve_medical_info' 도구를 사용하여 필요한 완화의료 지식을 검색하고 분석에 활용하세요.
+        이미 검색된 [의학 정보]가 충분하다면, 추가 검색 없이 분석을 진행할 수 있습니다.
         """
-        reasoned_info = self._generate_reasoning(prompt)
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", prompt),
+            MessagesPlaceholder(variable_name="messages")
+        ])
+
+        chain = prompt | self.model
+        response = chain.invoke({
+            "messages": state["messages"]
+        })
+
+        result_state = {"messages": [response]}
+
+        if not response.tool_calls:
+            result_state["medical_info"] = response.content
+            
         return {
-            "medical_info": reasoned_info,
+            "messages": [response], 
+            "scenario_theme_exp": scenario_theme_exp,
+            "medical_info": result_state.get("medical_info", ""),
             "retrieved_docs": retrieved_knowledge,
             "next_step": "patient"
         }
+        # reasoned_info = self._generate_reasoning(prompt)
+        # return {
+        #     "scenario_theme_exp": scenario_theme_exp,
+        #     "medical_info": reasoned_info,
+        #     "retrieved_docs": retrieved_knowledge,
+        #     "next_step": "patient"
+        # }
     
 if __name__ == "__main__":    # Example usage
     from langchain_core.messages import HumanMessage

@@ -1,9 +1,21 @@
+from agents.retriever import retrieve_medical_info
 from langgraph.graph import StateGraph, END
 from src.graph.state import AgentState
 from src.agents.medical_brain import MedicalBrain
 from src.agents.patient import PatientAgent
 from src.agents.evaluator import EvaluatorAgent
+from langgraph.prebuilt import ToolNode
+    
 
+tool_node = ToolNode(tools=[retrieve_medical_info], name="medical_retriever", description="의학 정보 검색 도구입니다. 완화의료 상황에서 환자의 증상 관리, 의사소통 기법, 윤리적 가이드라인 등 다양한 의료 정보를 검색할 때 사용됩니다.")
+
+def should_continue(state: AgentState):
+    messages = state["messages"]
+    last_message = messages[-1]
+
+    if last_message.tool_calls:
+        return "medical_retriever"
+    return "patient_agent"
 
 def buildworkflow(patient_model_name: str = "gpt-40-mini", medical_brain_model_name: str = "gpt-40-mini", evaluator_model_name: str = "gpt-40-mini"):  # Build the multi-agent workflow
     brain = MedicalBrain(model_name=medical_brain_model_name, db_path='data/chroma_db')
@@ -12,10 +24,20 @@ def buildworkflow(patient_model_name: str = "gpt-40-mini", medical_brain_model_n
 
     workflow = StateGraph(AgentState)
     workflow.add_node("medical_brain", brain)
+    workflow.add_node("medical_retriever", tool_node)
     workflow.add_node("patient_agent", patient_agent)
     workflow.add_node("evaluator_agent", evaluator_agent)
 
     workflow.set_entry_point("medical_brain")
+    workflow.add_conditional_edge(
+        "medical_brain",
+        should_continue,
+        {
+            "medical_retriever": "medical_retriever",
+            "patient_agent": "patient_agent"
+
+        }
+    )
     workflow.add_edge("medical_brain", "patient_agent")
     # workflow.add_edge("patient_agent", "evaluator_agent")
     # workflow.add_edge("evaluator_agent", END)
