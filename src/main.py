@@ -17,7 +17,8 @@ class Controller:
             "retrieved_docs": [],
             "checklist": {},
             "next_step": "",
-            "current_scenario": ""
+            "scenario_theme": "",
+            "scenario_details": {},
         }
 
     def process_turn(self, user_input: str, current_state: dict):
@@ -45,20 +46,51 @@ class Controller:
         return final_state
     
 if __name__ == "__main__":
-    patient_model = "gpt-4o-mini"
-    medical_brain_model = "gpt-4o-mini"
-    evaluator_model = "gpt-4o-mini"
+    patient_model = "gpt-4o"
+    medical_brain_model = "gpt-4o"
+    evaluator_model = "gpt-4o"
     controller = Controller(patient_model_name=patient_model, medical_brain_model_name=medical_brain_model, evaluator_model_name=evaluator_model)
     state = controller.get_initial_state()
 
     print("medical RAG Multi-Agent Framework CLI 실행")
     while True:
-        if not state.get("current_scenario"):
-            print("시나리오를 입력해 주세요 ")
-            scenario_input = input(">> ")
-            state["current_scenario"] = scenario_input
-            print(f"시나리오가 설정되었습니다: {state['current_scenario']}\n")
+        if not state.get("scenario_theme"):
+            print("시나리오 테마를 선택해 주세요(1: 죽음에 대해 알리는 상황, 2: 존엄한 선택을 돕는 상황)")
+            scenario_input = input(">>")
+            if scenario_input == "1":
+                state["scenario_theme"] = "breaking_bad_news"
+                print("선택된 시나리오 테마: 죽음에 대해 알리는 상황")
+            elif scenario_input == "2":
+                state["scenario_theme"] = "dignified_choice"
+                print("선택된 시나리오 테마: 존엄한 선택을 돕는 상황")
+            else:
+                print("잘못된 입력입니다. 1 또는 2를 입력해 주세요.")
+                continue
 
+        if not state.get("scenario_details"):
+            print("시나리오 세부 정보를 각 차례에 맞게 입력해 주세요")
+            print("환자 나이")
+            age = input(">>")
+            print("환자 성별")
+            gender = input(">>")
+            print("환자의 기본적인 인적 사항")
+            identity_details = input(">>")
+            print("환자의 성격")
+            personality = input(">>")
+            print("환자의 상태및 주요 증상")
+            condition = input(">>")
+            print("환자의 가족 관계")
+            family = input(">>")
+            print("추가 세부 정보")
+            additional_details = input(">>")
+
+            state["scenario_details"] = {
+                "patient_identity": age + gender + identity_details,
+                "patient_personality": personality,
+                "current_condition": condition,
+                "family_context": family,
+                "additional_notes": additional_details 
+            }
         user_input = input(">> ")
         if user_input.lower() in ["exit", "quit", "q", "Q"]:
             break

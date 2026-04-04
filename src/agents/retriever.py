@@ -15,6 +15,7 @@ def retrieve_medical_info(query: str, k: int):
     """
     retriever = MedicalRetriever("data/chroma_db")
     
+    print(f"Retrieving medical information for query: '{query}' with top {k} results...")
     
     translator = GoogleTranslator(source='ko', target='en')
     query_en = translator.translate(query)
@@ -22,7 +23,15 @@ def retrieve_medical_info(query: str, k: int):
     combined_query = f"{query} {query_en}"
 
     docs = retriever.retrieve_with_scores(combined_query, k=k)
-    return docs
+    
+    print(f"Retrieved {len(docs)} documents:")
+
+    formatted_docs = []
+    for doc, score in docs:
+        title = doc.metadata.get("title", "No Title")
+        content = doc.page_content
+        formatted_docs.append(f"Title: {title}\nContent: {content}\nScore: {score:.4f}")
+    return "\n\n---\n\n".join(formatted_docs)
 
         
 

@@ -20,14 +20,10 @@ class PatientAgent:   # Patient Simulation Agent
         [대화 내용]
         {messages_data}
         [행동 지침]
-        1. 당신의 행동 및 반응은 [나의 상태 및 지식]에 기반해야 합니다.
-        2. 당신은 [환자 정보]에 기반하여 현실적이고 인간적인 방식으로 반응해야 합니다.
-        3. 경우에 따라 의사에게 질문을 하거나, 자신의 감정과 생각을 표현할 수 있습니다.
-        4. 당신의 반응은 시나리오에 맞게 조정되어야 합니다.
-           - 예를 들어, "죽음에 대해 알리는 상황"에서는 충격과 슬픔 또는 환자 성격에 맞게 적절히 표현할 수 있습니다.
-           - "존엄한 선택을 돕는 상황"에서는 자신의 가치와 선호를 표현할 수 있습니다.
-        5. 당신의 반응은 시나리오의 맥락과 일치해야 하며, 의사의 현재 질문이나 발언에 적절히 대응하여 대화가 진행되도록 해야 합니다.
-           - 대와가 진행되면서 [대화 내용]에 기반하여 현재 자신의 감정과 생각이 변화 할 수 있음을 인지하고, 이를 반영하여 반응해야 합니다.
+        [나의 상태 및 지식] 섹션은 지금 당신이 느끼는 실제 통증과 무의식적인 생각입니다. 당신은 이 분석 내용을 지식으로서 알고 있는 게 아니라, 몸과 마음으로 직접 겪고 있는 상태입니다. 이 느낌을 대화 속에 녹여내세요.
+        [환자 정보] 와 성격에 따라 당신이 보이는 행동과 반응이 달라질 수 있습니다.
+        예를 들어, 당신이 불안한 성격이라면, 의사가 통증에 대해 질문할 때, 당신은 통증의 강도와 위치를 자세히 설명하기보다는, "통증이 너무 심해서 견딜 수가 없어요" 라고 말할 수 있습니다. 반면에, 당신이 침착한 성격이라면, 의사가 통증에 대해 질문할 때, 당신은 통증의 강도와 위치를 구체적으로 설명할 수 있습니다.
+        대화가 진행됨에 따라, 문맥 속에서 당신이 느끼는 통증과 감정이 어떻게 변화하는지 표현할 수 있습니다. 
         """
         self.prompt_template = ChatPromptTemplate.from_messages([
             ("system", self.system_prompt),
@@ -41,6 +37,8 @@ class PatientAgent:   # Patient Simulation Agent
 
         medical_context = state.get("medical_info", "No medical information available.")
 
+        scenario_theme_exp = state.get("scenario_theme_exp", "")
+        scenario_details = state.get("scenario_details", {})
         messages_data = "\n".join([
             f"{'User' if msg.type == 'human' else 'Assistant'}: {msg.content}" 
             for msg in messages
@@ -48,6 +46,8 @@ class PatientAgent:   # Patient Simulation Agent
         chain = self.prompt_template | self.llm
 
         response = chain.invoke({
+            "scenario_theme_exp": scenario_theme_exp,
+            "scenario_details": scenario_details,
             "medical_context": medical_context,
             "messages": state["messages"],
             "messages_data": messages_data
